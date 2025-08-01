@@ -76,7 +76,8 @@ async function parseFT(link, transactionId) {
       paymentDateTime: dateTime,
       referenceNo: reference,
       reason,
-      totalAmount: totalAmount ? `${totalAmount} ETB` : "Unknown"
+      totalAmount: totalAmount ? `${totalAmount} ETB` : "Unknown",
+      IsValidForHospital: receiver && receiver.toUpperCase().includes('KADISCO')
     }
   };
 }
@@ -116,7 +117,8 @@ async function parseTelebirr(link, transactionId) {
       bankAccountNumber: accountNumber || 'Not available',
       receiptNumber,
       paymentDate,
-      totalAmountPaid
+      totalAmountPaid,
+      IsValidForHospital: accountNumber && accountNumber.toUpperCase().includes('KADISCO')
     }
   };
 }
@@ -126,6 +128,9 @@ app.get('/getresult/:transactionId', async (req, res) => {
   const transactionId = req.params.transactionId;
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
   const userAgent = req.headers['user-agent'] || 'Unknown';
+
+  // Read the ?isvalid=true query param and convert to boolean
+  const isValidFilter = req.query.isvalid === 'true';
 
   try {
     let result;
@@ -137,6 +142,11 @@ app.get('/getresult/:transactionId', async (req, res) => {
     } else {
       link = `https://transactioninfo.ethiotelecom.et/receipt/${transactionId}`;
       result = await parseTelebirr(link, transactionId);
+    }
+
+    // If filter is on and IsValidForHospital is false, reject
+    if (isValidFilter && !result.data.IsValidForHospital) {
+      return res.status(404).json({ error: "Transaction is not valid for hospital" });
     }
 
     logToDatabase(transactionId, link, result, ip, userAgent);
