@@ -7,7 +7,7 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
+const PORT = 2268;
 const dbFile = './db.db';
 
 // Create DB file if not exists
